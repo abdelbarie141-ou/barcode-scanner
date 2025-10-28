@@ -1,0 +1,310 @@
+{
+  "name": "barcode-scanner-app",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and extract barcode number from ZXing HTML\nconst results = [];\n\nfor (const item of $input.all($input.first().json.data)) {\n  const html = item.json.body || item.json.data || \"\";\n  const match = html.match(/<pre>(.*?)<\\/pre>/);\n  const barcode = match ? match[1].trim() : null;\n\n  results.push({\n    json: {\n      barcode,\n      original: item.json\n    }\n  });\n}\n\nreturn results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1968,
+        512
+      ],
+      "id": "856ddff9-4f22-402f-975e-b1a543978567",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2208,
+        752
+      ],
+      "id": "530247f7-d3a3-4e26-b2d8-fcd408c17056",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "RGxv1PKU7znrZnUo",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a smart product info assistant.\nWhen I give you a barcode (EAN, UPC, or GTIN), search the web for it and return clean, human-friendly information in this structured format:\n\nProduct Name:\nBrand:\nCategory:\nDescription:\nMain Features:\nSize / Weight:\nHow to Use (if applicable):\nIngredients / Materials (if available):\nImage URL:\nCountry / Market availability:\n\nThe output must be simple, factual, and nicely formatted in bullet points or sections.\nAvoid unnecessary links or ads.\nIf nothing is found, clearly say “No product found for this barcode.”\nand this is the barcode  {{ $json.barcode }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2192,
+        512
+      ],
+      "id": "471dabc0-bc9e-4a9b-8027-927994f717fc",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Query', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavilyTool",
+      "typeVersion": 1,
+      "position": [
+        2336,
+        752
+      ],
+      "id": "aeaa7726-f42b-42fd-982d-1daa07922ab8",
+      "name": "Search in Tavily",
+      "credentials": {
+        "tavilyApi": {
+          "id": "i4ipfjY6Lzh3Q4Pg",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.data }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "b1691092-af42-49ed-a04a-f38f67f97d26"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8ee77d1f-c078-483d-9762-227f93cf400c",
+                    "leftValue": "={{ $json.data }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notExists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        1744,
+        528
+      ],
+      "id": "eda10add-7088-45dc-867a-7319a7632453",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "url": "=https://zxing.org/w/decode?u={{ $json.url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        528
+      ],
+      "id": "affa5c23-952f-44f6-b0aa-56e19c503c42",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bc7804ca-24f2-4dda-9d98-25db862313e9",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1024,
+        528
+      ],
+      "id": "180addea-a771-4ec4-8096-4c083fc54c35",
+      "name": "Webhook",
+      "webhookId": "bc7804ca-24f2-4dda-9d98-25db862313e9",
+      "alwaysOutputData": false,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "operation": "uploadFile",
+        "additionalFieldsFile": {}
+      },
+      "type": "n8n-nodes-cloudinary.cloudinary",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        528
+      ],
+      "id": "5b7bb6ea-df93-4e7f-9484-c1c3110bd60b",
+      "name": "Upload an asset from file data",
+      "credentials": {
+        "cloudinaryApi": {
+          "id": "JL6eEhjys4jbMJsH",
+          "name": "Cloudinary account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2544,
+        512
+      ],
+      "id": "cd9fd9e8-a7ee-44b9-822a-c9f8f6ffd634",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search in Tavily": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Upload an asset from file data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload an asset from file data": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d112a467-ce04-4c40-bca1-7b5a0315f60c",
+  "meta": {
+    "instanceId": "8114fa8ca87fb8166de63172b9c5c394dc03cc00618661aeee382705419a026b"
+  },
+  "id": "s9b2XcBnbgbxZr2U",
+  "tags": []
+}
