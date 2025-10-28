@@ -19,10 +19,5 @@ A learning project that scans barcodes using a Lovable frontend and processes da
 - JavaScript, HTML, CSS
 - Optional APIs: BarcodeAPI, ZXing, etc.
 
-## 🧰 Project Files
-- `scan-reveal-barcode-workflow.json` – the exported n8n workflow
-- `/frontend` – Lovable app assets
-- `.env.example` – example environment variables
-
 ## 🧑‍💻 Author
 Built by **Abdelbari Ouamne** as a learning project.
